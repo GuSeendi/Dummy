@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="th">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Dummy Online</title>
+    <title>Dummy Online — เกมไพ่ดัมมี่</title>
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
@@ -13,27 +13,27 @@
     <template id="tpl-lobby">
       <div class="lobby">
         <h1>🃏 Dummy Online</h1>
-        <p class="tagline">Thai Dummy card game — 2 to 4 players</p>
-        <label>Your name
-          <input id="name-input" maxlength="20" placeholder="Enter name" />
+        <p class="tagline">เกมไพ่ดัมมี่ไทย — 2 ถึง 4 คน</p>
+        <label>ชื่อผู้เล่น
+          <input id="name-input" maxlength="20" placeholder="พิมพ์ชื่อ" />
         </label>
         <div class="lobby-actions">
-          <button id="btn-create">Create Room</button>
-          <div class="divider">or</div>
+          <button id="btn-create">สร้างห้อง</button>
+          <div class="divider">หรือ</div>
           <div class="join-row">
-            <input id="code-input" maxlength="5" placeholder="ROOM CODE" style="text-transform:uppercase" />
-            <button id="btn-join">Join</button>
+            <input id="code-input" maxlength="5" placeholder="รหัสห้อง" style="text-transform:uppercase" />
+            <button id="btn-join">เข้าห้อง</button>
           </div>
         </div>
         <details class="config">
-          <summary>House rules (optional)</summary>
-          <label>End-game target score (0 = play forever, stop whenever)
-            <input id="cfg-target" type="number" value="0" min="0" step="50" />
-          </label>
-          <div class="hint">The spec doesn't fix a target — you agree with your friends. 0 means the game never auto-ends; just leave the room when done.</div>
-          <label class="ck">
-            <input id="cfg-wrap" type="checkbox" /> Ace wraps around King (Q-K-A allowed)
-          </label>
+          <summary>กติกาย่อ</summary>
+          <ul class="rulesbrief">
+            <li><b>สเปโต:</b> 2♣ กับ Q♠ = 50 แต้ม</li>
+            <li><b>หัว:</b> ไพ่ใบแรกบนกองทิ้ง = +50 (หัวสเปโต +100)</li>
+            <li><b>เกิด:</b> ต้องมีไพ่ที่จั่ว/เก็บมาอย่างน้อย 1 ใบ / <b>ฝาก:</b> ต้องเคยเกิดแล้ว</li>
+            <li><b>น็อก:</b> +50 / มืด ×2 / สี ×2 / มืดสี ×4</li>
+            <li><b>ลบ:</b> ทิ้งมี่ ทิ้งเต็ม ทิ้งโง่ ถูกฝากสเปโต ปี้หัว (ครั้งละ −50), ลบมืด ×(−2)</li>
+          </ul>
         </details>
         <div class="err" id="lobby-err"></div>
       </div>
@@ -42,11 +42,11 @@
     <!-- Waiting room -->
     <template id="tpl-waiting">
       <div class="waiting">
-        <h1>Room <span id="room-code"></span></h1>
-        <p>Share this code with your friends. Game starts when host clicks Start (2–4 players).</p>
+        <h1>ห้อง <span id="room-code"></span></h1>
+        <p>ส่งรหัสห้องให้เพื่อน แล้วให้เจ้าของห้องกด "เริ่มเกม" (2–4 คน)</p>
         <div class="players" id="waiting-players"></div>
-        <button id="btn-start">Start Game</button>
-        <button id="btn-leave" class="ghost">Leave</button>
+        <button id="btn-start">เริ่มเกม</button>
+        <button id="btn-leave" class="ghost">ออกจากห้อง</button>
       </div>
     </template>
 
@@ -54,41 +54,40 @@
     <template id="tpl-game">
       <div class="game">
         <header class="topbar">
-          <span>Room <b id="g-code"></b></span>
-          <span>Round <b id="g-round"></b></span>
+          <span>ห้อง <b id="g-code"></b></span>
+          <span>รอบที่ <b id="g-round"></b></span>
           <span id="g-phase" class="phase"></span>
-          <button id="btn-leave-g" class="ghost sm">Leave</button>
+          <button id="btn-leave-g" class="ghost sm">ออก</button>
         </header>
 
         <section class="opponents" id="opponents"></section>
 
         <section class="table">
           <div class="table-center">
-            <div class="pile stock" id="stock-pile" title="Draw from stock">
+            <div class="pile stock" id="stock-pile" title="จั่วจากกอง">
               <div class="pile-count" id="stock-count"></div>
-              <div class="pile-label">Stock</div>
+              <div class="pile-label">กอง</div>
             </div>
-            <div class="pile discard" id="discard-pile" title="Pick up discard">
+            <div class="pile discard" id="discard-pile" title="เก็บใบบนสุด">
               <div id="discard-top-card"></div>
-              <div class="pile-label">Discard</div>
-              <button id="btn-draw-head" class="head-btn" title="Take head card">Head</button>
+              <div class="pile-label">กองทิ้ง</div>
             </div>
+            <div class="head-info" id="head-info"></div>
           </div>
           <div class="melds" id="melds"></div>
         </section>
 
         <section class="myhand-wrap">
           <div class="myhand-header">
-            <span>Your hand — <span id="hand-count"></span> cards, <span id="hand-points"></span> pts</span>
+            <span>ไพ่ในมือ — <span id="hand-count"></span> ใบ</span>
             <span class="mustuse" id="mustuse"></span>
           </div>
           <div class="myhand" id="myhand"></div>
           <div class="actions">
-            <button id="btn-meld" disabled title="Meld selected cards as a new set/run">Meld</button>
-            <button id="btn-layoff" disabled title="Lay off selected card onto a meld you click">Lay Off</button>
-            <button id="btn-discard" disabled title="Discard selected card">Discard</button>
-            <button id="btn-knock" title="Open knock planner">Knock…</button>
-            <button id="btn-clear" class="ghost">Clear selection</button>
+            <button id="btn-meld" disabled title="เกิด (ใช้ไพ่ที่เลือกอย่างน้อย 3 ใบ, ต้องมีไพ่ที่จั่วมา ≥1)">เกิด</button>
+            <button id="btn-layoff" disabled title="ฝากไพ่ที่เลือก (ต้องเคยเกิดแล้ว)">ฝาก</button>
+            <button id="btn-discard" disabled title="ทิ้งไพ่ที่เลือก 1 ใบ">ทิ้ง</button>
+            <button id="btn-clear" class="ghost">ยกเลิกการเลือก</button>
           </div>
         </section>
 
@@ -97,42 +96,14 @@
           <div class="log" id="log"></div>
         </aside>
 
-        <div id="speto-modal" class="modal hidden">
-          <div class="modal-card">
-            <h3>SPETO opportunity!</h3>
-            <p>The discarded card <span id="speto-card"></span> completes a meld with 2 of your cards.</p>
-            <div id="speto-combos"></div>
-            <p class="timer">Time left: <span id="speto-timer"></span>s</p>
-            <button id="speto-cancel" class="ghost">Pass</button>
-          </div>
-        </div>
-
-        <div id="knock-modal" class="modal hidden">
-          <div class="modal-card large">
-            <h3>Knock plan</h3>
-            <p>Assign every card in your hand so exactly one is discarded and the rest go into melds, layoffs, or face-down layoffs.</p>
-            <div id="knock-planner"></div>
-            <div class="modal-actions">
-              <button id="knock-submit">Submit knock</button>
-              <button id="knock-cancel" class="ghost">Cancel</button>
-            </div>
-            <div id="knock-err" class="err"></div>
-          </div>
-        </div>
-
         <div id="round-modal" class="modal hidden">
-          <div class="modal-card">
-            <h3 id="round-title">Round ended</h3>
+          <div class="modal-card large">
+            <h3 id="round-title">จบรอบ</h3>
             <div id="round-scores"></div>
-            <button id="btn-next-round">Next round</button>
-          </div>
-        </div>
-
-        <div id="game-over-modal" class="modal hidden">
-          <div class="modal-card">
-            <h3>🏆 Game over</h3>
-            <div id="final-scores"></div>
-            <button id="btn-leave-final">Back to lobby</button>
+            <div class="modal-actions">
+              <button id="btn-next-round">เล่นรอบต่อไป</button>
+              <button id="btn-leave-round" class="ghost">ออกจากห้อง</button>
+            </div>
           </div>
         </div>
       </div>

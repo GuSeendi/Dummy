@@ -27,15 +27,6 @@ function broadcastRoom(room) {
   }
 }
 
-function scheduleSpetoTimeout(room) {
-  if (room.spetoTimer) clearTimeout(room.spetoTimer);
-  const ms = room.game.config.spetoWindowMs || 6000;
-  room.spetoTimer = setTimeout(() => {
-    const res = room.game.resolveSpetoTimeout();
-    if (res.ok) broadcastRoom(room);
-  }, ms + 200); // small grace
-}
-
 io.on('connection', (socket) => {
   socket.on('createRoom', ({ name, config }, ack) => {
     const displayName = (name || 'Player').slice(0, 20);
@@ -70,20 +61,14 @@ io.on('connection', (socket) => {
     if (!room) return ack?.({ ok: false, error: 'Not in a room' });
     const res = fn(room, payload);
     ack?.(res);
-    if (res.ok) {
-      broadcastRoom(room);
-      if (room.game.turnPhase === 'spetoWindow') scheduleSpetoTimeout(room);
-    }
+    if (res.ok) broadcastRoom(room);
   };
 
   socket.on('drawStock', gameAction((room) => room.game.drawStock(socket.id)));
   socket.on('drawDiscard', gameAction((room) => room.game.drawDiscard(socket.id)));
-  socket.on('drawHead', gameAction((room) => room.game.drawHead(socket.id)));
   socket.on('meld', gameAction((room, { cardIds }) => room.game.meld(socket.id, cardIds || [])));
   socket.on('layOff', gameAction((room, { cardId, meldId }) => room.game.layOff(socket.id, cardId, meldId)));
   socket.on('discard', gameAction((room, { cardId }) => room.game.discard(socket.id, cardId)));
-  socket.on('speto', gameAction((room, { comboCardIds }) => room.game.speto(socket.id, comboCardIds || [])));
-  socket.on('knockPlan', gameAction((room, { plan }) => room.game.knockPlan(socket.id, plan || {})));
   socket.on('nextRound', gameAction((room) => room.game.nextRound()));
 
   socket.on('leaveRoom', () => {

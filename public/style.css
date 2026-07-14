@@ -53,6 +53,25 @@ input {
 .config .ck { display: flex; align-items: center; gap: 0.4em; }
 .config .ck input { width: auto; margin-top: 0; }
 .config .hint { color: #aaa; font-size: 0.85em; margin: 0.2em 0 0.6em; }
+.rulesbrief { padding-left: 1.2em; margin: 0.4em 0; color: #ddd; font-size: 0.9em; }
+.rulesbrief li { margin: 0.2em 0; }
+.head-info { margin-left: 1em; color: #ffd54f; font-size: 0.9em; }
+.card.speto { box-shadow: 0 0 0 2px #f1c40f inset; }
+.card.head-mark::after {
+  content: 'หัว';
+  position: absolute; top: -8px; right: -6px;
+  background: #f1c40f; color: #222;
+  border-radius: 3px; padding: 1px 4px;
+  font-size: 0.6em; font-weight: 700;
+}
+.card { position: relative; }
+.card .drawn-dot {
+  position: absolute; bottom: 2px; left: 2px;
+  width: 6px; height: 6px; background: #2196f3; border-radius: 50%;
+}
+#round-scores table { width: 100%; border-collapse: collapse; }
+#round-scores th, #round-scores td { padding: 4px 6px; border-bottom: 1px solid #444; text-align: left; font-size: 0.9em; }
+#round-scores tr.winner td { background: rgba(241,196,15,0.15); font-weight: 700; }
 
 /* ------- Waiting ------- */
 .waiting {
@@ -132,6 +151,9 @@ input {
 }
 .opponent .score { font-size: 0.85em; color: #ccc; margin-top: 0.2em; }
 .opponent .bonuses { font-size: 0.8em; color: #ffd54f; margin-top: 0.2em; }
+.opponent .tag { font-size: 0.65em; padding: 1px 6px; border-radius: 8px; margin-left: 4px; vertical-align: middle; }
+.opponent .tag.good { background: #2e7d32; color: #fff; }
+.opponent .tag.warn { background: #616161; color: #eee; }
 
 .table {
   grid-area: table;

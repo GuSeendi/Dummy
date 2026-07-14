@@ -1,9 +1,19 @@
 export const SUITS = ['spade', 'heart', 'diamond', 'club'];
-export const RANK_ORDER = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+// A is HIGH (Q-K-A allowed as a run tail; A-2-3 not allowed)
+export const RANK_ORDER = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 
-export function cardPoints(rank) {
-  if (rank === 'A') return 15;
-  if (rank === '10' || rank === 'J' || rank === 'Q' || rank === 'K') return 10;
+export const SPETO_IDS = new Set(['club-2', 'spade-Q']);
+
+export function isSpeto(card) {
+  return SPETO_IDS.has(card.id);
+}
+
+// Base per-card points used when the card is placed in a meld/layoff.
+// Speto cards always override to 50.
+export function cardPoints(card) {
+  if (isSpeto(card)) return 50;
+  if (card.rank === 'A') return 15;
+  if (card.rank === '10' || card.rank === 'J' || card.rank === 'Q' || card.rank === 'K') return 10;
   return 5;
 }
 
@@ -15,7 +25,10 @@ export function makeDeck() {
   const cards = [];
   for (const suit of SUITS) {
     for (const rank of RANK_ORDER) {
-      cards.push({ id: cardId(suit, rank), suit, rank, points: cardPoints(rank) });
+      const c = { id: cardId(suit, rank), suit, rank };
+      c.points = cardPoints(c);
+      c.isSpeto = isSpeto(c);
+      cards.push(c);
     }
   }
   return cards;
@@ -34,6 +47,10 @@ export function rankIndex(rank) {
   return RANK_ORDER.indexOf(rank);
 }
 
-export function sumPoints(cards) {
-  return cards.reduce((s, c) => s + c.points, 0);
+export function suitSymbol(suit) {
+  return { spade: '♠', heart: '♥', diamond: '♦', club: '♣' }[suit] || suit;
+}
+
+export function cardLabel(c) {
+  return `${c.rank}${suitSymbol(c.suit)}`;
 }
