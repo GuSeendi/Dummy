@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dummy Online</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <!-- Lobby -->
+    <template id="tpl-lobby">
+      <div class="lobby">
+        <h1>🃏 Dummy Online</h1>
+        <p class="tagline">Thai Dummy card game — 2 to 4 players</p>
+        <label>Your name
+          <input id="name-input" maxlength="20" placeholder="Enter name" />
+        </label>
+        <div class="lobby-actions">
+          <button id="btn-create">Create Room</button>
+          <div class="divider">or</div>
+          <div class="join-row">
+            <input id="code-input" maxlength="5" placeholder="ROOM CODE" style="text-transform:uppercase" />
+            <button id="btn-join">Join</button>
+          </div>
+        </div>
+        <details class="config">
+          <summary>Game settings</summary>
+          <label>Target score
+            <input id="cfg-target" type="number" value="300" min="50" step="50" />
+          </label>
+          <label class="ck">
+            <input id="cfg-wrap" type="checkbox" /> Ace wraps around King (Q-K-A allowed)
+          </label>
+        </details>
+        <div class="err" id="lobby-err"></div>
+      </div>
+    </template>
+
+    <!-- Waiting room -->
+    <template id="tpl-waiting">
+      <div class="waiting">
+        <h1>Room <span id="room-code"></span></h1>
+        <p>Share this code with your friends. Game starts when host clicks Start (2–4 players).</p>
+        <div class="players" id="waiting-players"></div>
+        <button id="btn-start">Start Game</button>
+        <button id="btn-leave" class="ghost">Leave</button>
+      </div>
+    </template>
+
+    <!-- Game -->
+    <template id="tpl-game">
+      <div class="game">
+        <header class="topbar">
+          <span>Room <b id="g-code"></b></span>
+          <span>Round <b id="g-round"></b></span>
+          <span id="g-phase" class="phase"></span>
+          <button id="btn-leave-g" class="ghost sm">Leave</button>
+        </header>
+
+        <section class="opponents" id="opponents"></section>
+
+        <section class="table">
+          <div class="table-center">
+            <div class="pile stock" id="stock-pile" title="Draw from stock">
+              <div class="pile-count" id="stock-count"></div>
+              <div class="pile-label">Stock</div>
+            </div>
+            <div class="pile discard" id="discard-pile" title="Pick up discard">
+              <div id="discard-top-card"></div>
+              <div class="pile-label">Discard</div>
+              <button id="btn-draw-head" class="head-btn" title="Take head card">Head</button>
+            </div>
+          </div>
+          <div class="melds" id="melds"></div>
+        </section>
+
+        <section class="myhand-wrap">
+          <div class="myhand-header">
+            <span>Your hand — <span id="hand-count"></span> cards, <span id="hand-points"></span> pts</span>
+            <span class="mustuse" id="mustuse"></span>
+          </div>
+          <div class="myhand" id="myhand"></div>
+          <div class="actions">
+            <button id="btn-meld" disabled title="Meld selected cards as a new set/run">Meld</button>
+            <button id="btn-layoff" disabled title="Lay off selected card onto a meld you click">Lay Off</button>
+            <button id="btn-discard" disabled title="Discard selected card">Discard</button>
+            <button id="btn-knock" title="Open knock planner">Knock…</button>
+            <button id="btn-clear" class="ghost">Clear selection</button>
+          </div>
+        </section>
+
+        <aside class="side">
+          <div class="scores" id="scores"></div>
+          <div class="log" id="log"></div>
+        </aside>
+
+        <div id="speto-modal" class="modal hidden">
+          <div class="modal-card">
+            <h3>SPETO opportunity!</h3>
+            <p>The discarded card <span id="speto-card"></span> completes a meld with 2 of your cards.</p>
+            <div id="speto-combos"></div>
+            <p class="timer">Time left: <span id="speto-timer"></span>s</p>
+            <button id="speto-cancel" class="ghost">Pass</button>
+          </div>
+        </div>
+
+        <div id="knock-modal" class="modal hidden">
+          <div class="modal-card large">
+            <h3>Knock plan</h3>
+            <p>Assign every card in your hand so exactly one is discarded and the rest go into melds, layoffs, or face-down layoffs.</p>
+            <div id="knock-planner"></div>
+            <div class="modal-actions">
+              <button id="knock-submit">Submit knock</button>
+              <button id="knock-cancel" class="ghost">Cancel</button>
+            </div>
+            <div id="knock-err" class="err"></div>
+          </div>
+        </div>
+
+        <div id="round-modal" class="modal hidden">
+          <div class="modal-card">
+            <h3 id="round-title">Round ended</h3>
+            <div id="round-scores"></div>
+            <button id="btn-next-round">Next round</button>
+          </div>
+        </div>
+
+        <div id="game-over-modal" class="modal hidden">
+          <div class="modal-card">
+            <h3>🏆 Game over</h3>
+            <div id="final-scores"></div>
+            <button id="btn-leave-final">Back to lobby</button>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="/client.js"></script>
+  </body>
+</html>
