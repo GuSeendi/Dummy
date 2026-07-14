@@ -26,10 +26,11 @@
           </div>
         </div>
         <details class="config">
-          <summary>Game settings</summary>
-          <label>Target score
-            <input id="cfg-target" type="number" value="300" min="50" step="50" />
+          <summary>House rules (optional)</summary>
+          <label>End-game target score (0 = play forever, stop whenever)
+            <input id="cfg-target" type="number" value="0" min="0" step="50" />
           </label>
+          <div class="hint">The spec doesn't fix a target — you agree with your friends. 0 means the game never auto-ends; just leave the room when done.</div>
           <label class="ck">
             <input id="cfg-wrap" type="checkbox" /> Ace wraps around King (Q-K-A allowed)
           </label>

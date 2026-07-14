@@ -37,17 +37,22 @@ input {
   border-radius: 12px;
 }
 .lobby label { display: block; margin: 0.5em 0; }
-.lobby input { width: 100%; margin-top: 0.3em; }
-.lobby-actions { display: flex; flex-direction: column; gap: 0.6em; margin-top: 1em; align-items: center; }
-.lobby-actions button { width: 100%; }
+.lobby label > input[type="text"],
+.lobby label > input:not([type]),
+.lobby label > input[type="number"] { width: 100%; margin-top: 0.3em; }
+.lobby-actions { display: flex; flex-direction: column; gap: 0.6em; margin-top: 1em; align-items: stretch; }
+.lobby-actions > button#btn-create { width: 100%; }
 .divider { color: #aaa; text-align: center; }
 .join-row { display: flex; gap: 0.4em; width: 100%; }
-.join-row input { flex: 1; }
+.join-row input { flex: 1 1 auto; min-width: 0; margin-top: 0; }
+.join-row button { flex: 0 0 auto; width: auto; }
 .tagline { color: #ccc; }
 .config { margin-top: 1.5em; }
 .config summary { cursor: pointer; color: #ffd54f; }
 .config label { margin: 0.4em 0; }
 .config .ck { display: flex; align-items: center; gap: 0.4em; }
+.config .ck input { width: auto; margin-top: 0; }
+.config .hint { color: #aaa; font-size: 0.85em; margin: 0.2em 0 0.6em; }
 
 /* ------- Waiting ------- */
 .waiting {

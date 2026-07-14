@@ -323,7 +323,9 @@ function renderScores() {
       <td>${p.totalScore}</td>
     </tr>
   `).join('');
-  c.innerHTML = `<b>Scoreboard</b> (goal ${state.config?.targetScore})
+  const goal = state.config?.targetScore;
+  const goalText = goal ? ` (goal ${goal})` : '';
+  c.innerHTML = `<b>Scoreboard</b>${goalText}
     <table><thead><tr><th>Player</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
