@@ -102,7 +102,6 @@ function phaseLabel() {
 function wireGameButtons() {
   document.getElementById('btn-leave-g').onclick = leaveRoom;
   document.getElementById('stock-pile').onclick = () => socket.emit('drawStock', {}, feedbackAck);
-  document.getElementById('discard-pile').onclick = () => socket.emit('drawDiscard', {}, feedbackAck);
   document.getElementById('btn-meld').onclick = () => {
     if (selectedIds.size < 3) return;
     socket.emit('meld', { cardIds: [...selectedIds] }, (r) => { if (r?.ok) selectedIds.clear(); feedbackAck(r); });
@@ -152,24 +151,26 @@ function penaltiesLine(p) {
 
 function renderPiles() {
   document.getElementById('stock-count').textContent = state.stockCount;
-  const topEl = document.getElementById('discard-top-card');
-  topEl.innerHTML = state.discardTop ? renderCardMini(state.discardTop, state.headCardId) : '';
-  const info = document.getElementById('head-info');
-  const headCard = findCardInPublic(state.headCardId);
-  if (headCard) {
-    const isSpetoHead = SPETO_IDS.has(state.headCardId);
-    const val = isSpetoHead ? '+100' : '+50';
-    info.innerHTML = `หัว: <b>${headCard.rank}${SUIT_SYM[headCard.suit]}</b> (${val}) ${state.headTaken ? '✓' : '<span style="color:#f88">ยังไม่มีใครใช้</span>'}`;
-  } else {
-    info.textContent = '';
+  const row = document.getElementById('discard-row');
+  row.innerHTML = '';
+  const pile = state.discardPile || [];
+  if (pile.length === 0) {
+    row.innerHTML = '<em style="color:#888">— ยังไม่มีไพ่ในกองทิ้ง —</em>';
+    return;
   }
-}
-
-function findCardInPublic(id) {
-  if (!id) return null;
-  for (const c of state.discardPile) if (c.id === id) return c;
-  for (const m of state.melds) for (const c of m.cards) if (c.id === id) return c;
-  return null;
+  pile.forEach((card, i) => {
+    const isTop = i === pile.length - 1;
+    const isHead = card.id === state.headCardId;
+    const red = SUIT_RED.has(card.suit) ? ' red' : '';
+    const speto = SPETO_IDS.has(card.id) ? ' speto' : '';
+    const el = document.createElement('div');
+    el.className = `card mini${red}${speto}${isTop ? ' top' : ''}`;
+    el.innerHTML = `<div class="top">${card.rank}${SUIT_SYM[card.suit]}</div><div class="bot">${SUIT_SYM[card.suit]}${card.rank}</div>` +
+      (isHead ? `<div class="head-tag">หัว${SPETO_IDS.has(card.id) ? ' +100' : ' +50'}</div>` : '');
+    if (isTop) el.title = 'เก็บใบนี้ (บนสุด)';
+    if (isTop) el.onclick = () => socket.emit('drawDiscard', {}, feedbackAck);
+    row.appendChild(el);
+  });
 }
 
 function isMyTurn() { return state.currentPlayerId === myId; }
