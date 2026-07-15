@@ -281,13 +281,20 @@ export class DummyGame {
       p.knockType = this._classifyKnock(p);
       this.knockerId = p.id;
       this.knockType = p.knockType;
-      // Whoever gave the last discard we picked up got ทิ้งโง่ (upgrade from ทิ้งมี่)
+      // ทิ้งโง่: if the knocker picked up from the previous discarder this turn → -50.
+      // If a ทิ้งมี่/ปี้หัว penalty was already logged against the feeder for the
+      // same discard event, remove it (each discard is at most one penalty).
       if (this.lastDiscard && this.lastDiscard.discarderId !== p.id) {
         const feeder = this.players.find((pl) => pl.id === this.lastDiscard.discarderId);
         if (feeder) {
-          // Remove any pending ทิ้งมี่ for this last-discard event and replace with ทิ้งโง่
-          feeder.penalties.push({ type: 'stupid' });
-          this._log(`${feeder.name} โดน "ทิ้งโง่" (-50) เพราะถูกน็อกด้วยไพ่ที่ทิ้ง.`);
+          const before = feeder.penalties.length;
+          feeder.penalties = feeder.penalties.filter(
+            (x) => !(x._fromDiscardId === this.lastDiscard.cardId && (x.type === 'tingMee' || x.type === 'piHua'))
+          );
+          const removed = before - feeder.penalties.length;
+          feeder.penalties.push({ type: 'stupid', _fromDiscardId: this.lastDiscard.cardId });
+          if (removed > 0) this._log(`${feeder.name} โดน "ทิ้งโง่" (-50) แทน (แทนที่ทิ้งมี่/ปี้หัว).`);
+          else this._log(`${feeder.name} โดน "ทิ้งโง่" (-50) เพราะถูกน็อกด้วยไพ่ที่ทิ้ง.`);
         }
       }
       this._log(`${p.name} น็อก${knockTypeLabel(p.knockType)}! (+${BONUS_KNOCK})`);

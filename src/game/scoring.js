@@ -63,9 +63,10 @@ export function calculateScores(gameState) {
 
     // Order of ops: (meldPts + knockBonus) * multiplier, then subtract penalties.
     // (Multiplier applies only to knocker's score per spec.)
-    // Then if darkNegative applies (only for non-knockers), multiply the whole net by -2.
+    // Then if darkNegative applies (non-knocker who never melded), coerce net to
+    // -2 × |net| — the rule punishes: it never turns a loss into a gain.
     let net = (meldPts + knockBonus) * multiplier - penaltyPts;
-    if (darkNegative) net = net * DARK_NEGATIVE_MULT;
+    if (darkNegative) net = -2 * Math.abs(net);
 
     results.push({
       playerId: p.id,
