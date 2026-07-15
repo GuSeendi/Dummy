@@ -222,9 +222,17 @@ function renderMyHand() {
   const hand = handOrder.map((id) => byId[id]).filter(Boolean);
   document.getElementById('hand-count').textContent = hand.length;
   const mustMeld = new Set(state.mustMeldCardIds || []);
-  document.getElementById('mustuse').innerHTML = mustMeld.size
-    ? `⚠ ต้องเกิดใบนี้เทิร์นนี้: ${[...mustMeld].map((id) => labelCardId(id, hand)).join(', ')}`
+  const myPenLine = penaltiesLine(me);
+  const myPreview = previewRoundNet(me.id);
+  const previewStr = myPreview.net === 0 ? '0' : (myPreview.net > 0 ? `+${myPreview.net}` : `${myPreview.net}`);
+  const meta = [
+    myPenLine ? `<span style="color:#ff8080">${myPenLine}</span>` : '',
+    `<span style="color:${myPreview.net >= 0 ? '#8bc34a' : '#ff8080'}">รอบนี้: ${previewStr}</span>`,
+  ].filter(Boolean).join(' · ');
+  const must = mustMeld.size
+    ? `<span style="color:#ff9800">⚠ ต้องเกิด: ${[...mustMeld].map((id) => labelCardId(id, hand)).join(', ')}</span>`
     : '';
+  document.getElementById('mustuse').innerHTML = [must, meta].filter(Boolean).join(' · ');
   const c = document.getElementById('myhand');
   c.innerHTML = '';
   hand.forEach((card, idx) => {
@@ -295,15 +303,44 @@ function renderCardMini(card, headId, ownerId) {
   return `<div class="card mini${red}${speto}${head}" title="${ownerInitial ? 'โดย ' + ownerInitial : ''}"><div class="top">${card.rank}${SUIT_SYM[card.suit]}</div><div class="bot">${SUIT_SYM[card.suit]}${card.rank}</div></div>`;
 }
 
+function cardPointsClient(card) {
+  if (SPETO_IDS.has(card.id)) return 50;
+  if (card.rank === 'A') return 15;
+  if (card.rank === '10' || card.rank === 'J' || card.rank === 'Q' || card.rank === 'K') return 10;
+  return 5;
+}
+
+function previewRoundNet(playerId) {
+  let meldPts = 0;
+  for (const m of state.melds || []) {
+    for (const c of m.cards) {
+      if (m.contributions?.[c.id] === playerId) {
+        const isHead = c.id === state.headCardId;
+        const isSpeto = SPETO_IDS.has(c.id);
+        meldPts += isHead ? (isSpeto ? 100 : 50) : cardPointsClient(c);
+      }
+    }
+  }
+  const p = state.players.find((x) => x.id === playerId);
+  const penaltyPts = ((p?.penalties) || []).length * 50;
+  return { meldPts, penaltyPts, net: meldPts - penaltyPts };
+}
+
 function renderScores() {
   const c = document.getElementById('scores');
-  const rows = state.players.map((p) => `
-    <tr class="${p.isCurrent ? 'current' : ''}">
+  const rows = state.players.map((p) => {
+    const prev = previewRoundNet(p.id);
+    const netStr = prev.net === 0 ? '0' : (prev.net > 0 ? `+${prev.net}` : `${prev.net}`);
+    const netClass = prev.net > 0 ? 'pos' : prev.net < 0 ? 'neg' : '';
+    const detail = `<span class="preview-detail" title="เกิด/ฝาก +${prev.meldPts}, ลบ -${prev.penaltyPts}">+${prev.meldPts} / -${prev.penaltyPts}</span>`;
+    return `<tr class="${p.isCurrent ? 'current' : ''}">
       <td>${escapeHtml(p.name)}${p.id === myId ? ' (คุณ)' : ''}</td>
+      <td class="${netClass}"><b>${netStr}</b> <div>${detail}</div></td>
       <td>${p.totalScore}</td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
   c.innerHTML = `<b>คะแนนสะสม</b>
-    <table><thead><tr><th>ผู้เล่น</th><th>รวม</th></tr></thead><tbody>${rows}</tbody></table>`;
+    <table><thead><tr><th>ผู้เล่น</th><th>รอบนี้</th><th>รวม</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 function renderLog() {

@@ -337,6 +337,9 @@ input {
 .scores table { width: 100%; font-size: 0.9em; border-collapse: collapse; }
 .scores th, .scores td { text-align: left; padding: 2px 4px; }
 .scores tr.current td { background: rgba(241,196,15,0.15); }
+.scores td.pos { color: #8bc34a; }
+.scores td.neg { color: #ff8080; }
+.scores .preview-detail { display: block; font-size: 0.7em; color: #aaa; font-weight: normal; }
 
 /* ------- Modals ------- */
 .modal {
