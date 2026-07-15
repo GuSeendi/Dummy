@@ -358,7 +358,11 @@ function renderRoundEnd() {
   document.getElementById('round-title').textContent = `จบรอบที่ ${state.roundNumber}`;
   const rows = sorted.map((s) => {
     const penDesc = s.penaltyEvents.length ? s.penaltyEvents.map((e) => penLabel[e.type] || e.type).join(', ') : '—';
-    const bonusDesc = s.knockType ? `${knockLabel[s.knockType]} +${s.knockBonus}${s.multiplier > 1 ? ` ×${s.multiplier}` : ''}` : '';
+    const bonusDesc = s.knockType
+      ? (s.multiplier > 1
+          ? `${knockLabel[s.knockType]} (ไพ่×${s.multiplier})+${s.knockBonus}`
+          : `${knockLabel[s.knockType]} +${s.knockBonus}`)
+      : '';
     const dark = s.darkNegative ? '<span style="color:#ff8080">ลบมืด ×(−2)</span>' : '';
     return `<tr class="${s.net === maxNet ? 'winner' : ''}"><td>${escapeHtml(s.name)}</td><td>${s.meldPts}</td><td>${bonusDesc || '—'}</td><td>${penDesc} (${-s.penaltyPts})</td><td>${dark}</td><td><b>${s.net >= 0 ? '+' : ''}${s.net}</b></td></tr>`;
   }).join('');

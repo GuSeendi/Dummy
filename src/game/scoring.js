@@ -61,11 +61,12 @@ export function calculateScores(gameState) {
       darkNegative = true;
     }
 
-    // Order of ops: (meldPts + knockBonus) * multiplier, then subtract penalties.
-    // (Multiplier applies only to knocker's score per spec.)
-    // Then if darkNegative applies (non-knocker who never melded), coerce net to
+    // Order of ops per spec §11: multiply CARD points first, then add the +50
+    // knock bonus, then subtract penalties. e.g. blind knock with 120 card pts
+    // = (120 × 2) + 50 = 290, NOT (120 + 50) × 2.
+    // If darkNegative applies (non-knocker who never melded), coerce net to
     // -2 × |net| — the rule punishes: it never turns a loss into a gain.
-    let net = (meldPts + knockBonus) * multiplier - penaltyPts;
+    let net = meldPts * multiplier + knockBonus - penaltyPts;
     if (darkNegative) net = -2 * Math.abs(net);
 
     results.push({
