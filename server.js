@@ -65,7 +65,7 @@ io.on('connection', (socket) => {
   };
 
   socket.on('drawStock', gameAction((room) => room.game.drawStock(socket.id)));
-  socket.on('drawDiscard', gameAction((room) => room.game.drawDiscard(socket.id)));
+  socket.on('drawDiscard', gameAction((room, payload) => room.game.drawDiscard(socket.id, payload?.targetCardId)));
   socket.on('meld', gameAction((room, { cardIds }) => room.game.meld(socket.id, cardIds || [])));
   socket.on('layOff', gameAction((room, { cardId, meldId }) => room.game.layOff(socket.id, cardId, meldId)));
   socket.on('discard', gameAction((room, { cardId }) => room.game.discard(socket.id, cardId)));

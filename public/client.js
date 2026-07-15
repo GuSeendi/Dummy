@@ -12,6 +12,8 @@ let hostId = null;
 let myId = null;
 let selectedIds = new Set();
 let pendingLayoff = null;
+let handOrder = []; // local per-client card order; user-draggable
+let dragCardId = null;
 
 function view(id) {
   const tpl = document.getElementById(id);
@@ -154,6 +156,7 @@ function renderPiles() {
   const row = document.getElementById('discard-row');
   row.innerHTML = '';
   const pile = state.discardPile || [];
+  const canPick = isMyTurn() && state.turnPhase === 'draw';
   if (pile.length === 0) {
     row.innerHTML = '<em style="color:#888">— ยังไม่มีไพ่ในกองทิ้ง —</em>';
     return;
@@ -163,12 +166,16 @@ function renderPiles() {
     const isHead = card.id === state.headCardId;
     const red = SUIT_RED.has(card.suit) ? ' red' : '';
     const speto = SPETO_IDS.has(card.id) ? ' speto' : '';
+    const takeCount = pile.length - i; // pick this card + everything after
     const el = document.createElement('div');
-    el.className = `card mini${red}${speto}${isTop ? ' top' : ''}`;
+    el.className = `card mini${red}${speto}${isTop ? ' top' : ''}${canPick ? ' pickable' : ''}`;
     el.innerHTML = `<div class="top">${card.rank}${SUIT_SYM[card.suit]}</div><div class="bot">${SUIT_SYM[card.suit]}${card.rank}</div>` +
-      (isHead ? `<div class="head-tag">หัว${SPETO_IDS.has(card.id) ? ' +100' : ' +50'}</div>` : '');
-    if (isTop) el.title = 'เก็บใบนี้ (บนสุด)';
-    if (isTop) el.onclick = () => socket.emit('drawDiscard', {}, feedbackAck);
+      (isHead ? `<div class="head-tag">หัว${SPETO_IDS.has(card.id) ? ' +100' : ' +50'}</div>` : '') +
+      (canPick && !isTop ? `<div class="take-badge">+${takeCount - 1}</div>` : '');
+    if (canPick) {
+      el.title = isTop ? 'เก็บใบบนสุด (ต้องเกิด)' : `เก็บใบนี้ + พ่วง ${takeCount - 1} ใบด้านบน (ต้องเกิดใบนี้)`;
+      el.onclick = () => socket.emit('drawDiscard', { targetCardId: card.id }, feedbackAck);
+    }
     row.appendChild(el);
   });
 }
@@ -201,32 +208,70 @@ function renderMelds() {
   }
 }
 
+function reconcileHandOrder(handCards) {
+  const currentIds = new Set(handCards.map((c) => c.id));
+  handOrder = handOrder.filter((id) => currentIds.has(id));
+  for (const c of handCards) if (!handOrder.includes(c.id)) handOrder.push(c.id);
+}
+
 function renderMyHand() {
   const me = state.players.find((p) => p.id === myId);
   if (!me?.hand) return;
-  const hand = [...me.hand].sort((a, b) => {
-    if (a.suit !== b.suit) return a.suit.localeCompare(b.suit);
-    return RANK_ORDER.indexOf(a.rank) - RANK_ORDER.indexOf(b.rank);
-  });
+  reconcileHandOrder(me.hand);
+  const byId = Object.fromEntries(me.hand.map((c) => [c.id, c]));
+  const hand = handOrder.map((id) => byId[id]).filter(Boolean);
   document.getElementById('hand-count').textContent = hand.length;
-  const mustUse = new Set(state.mustUseCardIds || []);
-  document.getElementById('mustuse').innerHTML = mustUse.size
-    ? `⚠ ต้องใช้ในเทิร์นนี้: ${[...mustUse].map((id) => labelCardId(id, hand)).join(', ')}`
+  const mustMeld = new Set(state.mustMeldCardIds || []);
+  document.getElementById('mustuse').innerHTML = mustMeld.size
+    ? `⚠ ต้องเกิดใบนี้เทิร์นนี้: ${[...mustMeld].map((id) => labelCardId(id, hand)).join(', ')}`
     : '';
   const c = document.getElementById('myhand');
   c.innerHTML = '';
-  for (const card of hand) {
+  hand.forEach((card, idx) => {
     const el = document.createElement('div');
     const red = SUIT_RED.has(card.suit) ? ' red' : '';
     const speto = SPETO_IDS.has(card.id) ? ' speto' : '';
     const isHead = card.id === state.headCardId;
     const selected = selectedIds.has(card.id) ? ' selected' : '';
     el.className = `card${red}${speto}${selected}${isHead ? ' head-mark' : ''}`;
-    if (mustUse.has(card.id)) el.style.outlineColor = '#ff9800';
+    if (mustMeld.has(card.id)) el.style.outlineColor = '#ff9800';
+    el.dataset.cardId = card.id;
+    el.draggable = true;
     el.innerHTML = `<div class="top">${card.rank}${SUIT_SYM[card.suit]}</div><div class="bot">${SUIT_SYM[card.suit]}${card.rank}</div>${card.drawn ? '<div class="drawn-dot" title="ไพ่ที่จั่วมา"></div>' : ''}`;
     el.onclick = () => toggleSelect(card.id);
+    el.ondragstart = (e) => { dragCardId = card.id; e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', card.id); } catch {} el.classList.add('dragging'); };
+    el.ondragend = () => { el.classList.remove('dragging'); dragCardId = null; document.querySelectorAll('.myhand .drop-before').forEach((n) => n.classList.remove('drop-before')); };
+    el.ondragover = (e) => { if (dragCardId && dragCardId !== card.id) { e.preventDefault(); el.classList.add('drop-before'); } };
+    el.ondragleave = () => el.classList.remove('drop-before');
+    el.ondrop = (e) => {
+      e.preventDefault();
+      el.classList.remove('drop-before');
+      const draggedId = dragCardId || e.dataTransfer.getData('text/plain');
+      if (!draggedId || draggedId === card.id) return;
+      const from = handOrder.indexOf(draggedId);
+      let to = handOrder.indexOf(card.id);
+      if (from === -1 || to === -1) return;
+      handOrder.splice(from, 1);
+      to = handOrder.indexOf(card.id); // recompute after splice
+      handOrder.splice(to, 0, draggedId);
+      render();
+    };
     c.appendChild(el);
-  }
+  });
+  // Drop at end of hand (for dropping past the last card)
+  const c2 = document.getElementById('myhand');
+  c2.ondragover = (e) => { if (dragCardId) e.preventDefault(); };
+  c2.ondrop = (e) => {
+    if (e.target !== c2) return; // already handled by a card
+    e.preventDefault();
+    const draggedId = dragCardId || e.dataTransfer.getData('text/plain');
+    if (!draggedId) return;
+    const from = handOrder.indexOf(draggedId);
+    if (from === -1) return;
+    handOrder.splice(from, 1);
+    handOrder.push(draggedId);
+    render();
+  };
 }
 
 function labelCardId(id, hand) { const c = hand.find((x) => x.id === id); return c ? `${c.rank}${SUIT_SYM[c.suit]}` : id; }
@@ -239,7 +284,7 @@ function updateActionButtons() {
   const meldPhase = myTurn && state.turnPhase === 'meld';
   document.getElementById('btn-meld').disabled = !(meldPhase && selectedIds.size >= 3);
   document.getElementById('btn-layoff').disabled = !(meldPhase && selectedIds.size === 1 && state.melds.length > 0 && me?.hasMelded);
-  document.getElementById('btn-discard').disabled = !(meldPhase && selectedIds.size === 1 && (state.mustUseCardIds || []).length === 0);
+  document.getElementById('btn-discard').disabled = !(meldPhase && selectedIds.size === 1 && (state.mustMeldCardIds || []).length === 0);
 }
 
 function renderCardMini(card, headId, ownerId) {

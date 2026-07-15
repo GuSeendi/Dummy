@@ -30,7 +30,9 @@ export class DummyGame {
     this.dealerIndex = 0;
     this.headCardId = null;
     this.headTaken = false;
-    this.mustUseCardIds = new Set();
+    // Cards picked up from the discard pile that MUST be used in a new meld (เกิด)
+    // before the turn can end. Layoff does not clear these.
+    this.mustMeldCardIds = new Set();
     this.lastDiscard = null; // { cardId, discarderId } — set on discard, cleared when next player draws
     this.knockerId = null;
     this.knockType = null;
@@ -97,7 +99,7 @@ export class DummyGame {
       p.knockType = null;
     }
     this.melds = [];
-    this.mustUseCardIds = new Set();
+    this.mustMeldCardIds = new Set();
     this.headTaken = false;
     this.lastDiscard = null;
     this.knockerId = null;
@@ -146,20 +148,34 @@ export class DummyGame {
     return { ok: true };
   }
 
-  drawDiscard(playerId) {
+  // Pick up from the discard pile. `targetCardId` is the specific card the player
+  // wants (they must "เกิด" with it this turn). They get that card PLUS every card
+  // discarded after it. If targetCardId is omitted, defaults to the top card.
+  drawDiscard(playerId, targetCardId = null) {
     const r = this._requireCurrentPlayer(playerId);
     if (!r.ok) return r;
     if (this.turnPhase !== 'draw') return { ok: false, error: 'Not draw phase' };
     if (this.discardPile.length === 0) return { ok: false, error: 'ไม่มีไพ่ในกองทิ้ง' };
-    const card = this.discardPile.pop();
+    let startIdx;
+    if (targetCardId) {
+      startIdx = this.discardPile.findIndex((c) => c.id === targetCardId);
+      if (startIdx === -1) return { ok: false, error: 'ไม่พบไพ่ที่เลือกในกองทิ้ง' };
+    } else {
+      startIdx = this.discardPile.length - 1;
+    }
+    const taken = this.discardPile.splice(startIdx); // target + everything above
+    const target = taken[0];
     const p = this.players[r.idx];
-    p.hand.push(card);
-    p.drawnCardIds.add(card.id);
-    this.mustUseCardIds.add(card.id);
+    for (const c of taken) {
+      p.hand.push(c);
+      p.drawnCardIds.add(c.id);
+    }
+    // Only the TARGET card must be melded this turn; extras become normal hand cards
+    this.mustMeldCardIds.add(target.id);
     this.turnPhase = 'meld';
-    this._log(`${p.name} เก็บ ${cardLabel(card)} จากกองทิ้ง.`);
-    // Don't clear lastDiscard yet — it will be evaluated when we see how they use this card
-    return { ok: true, drewCardId: card.id };
+    const extra = taken.length > 1 ? ` (พ่วง ${taken.length - 1} ใบ)` : '';
+    this._log(`${p.name} เก็บ ${cardLabel(target)}${extra} จากกองทิ้ง.`);
+    return { ok: true, drewCardIds: taken.map((c) => c.id), targetCardId: target.id };
   }
 
   meld(playerId, cardIds) {
@@ -177,7 +193,7 @@ export class DummyGame {
     }
     // Apply
     p.hand = p.hand.filter((c) => !cardIds.includes(c.id));
-    for (const id of cardIds) { p.drawnCardIds.delete(id); this.mustUseCardIds.delete(id); }
+    for (const id of cardIds) { p.drawnCardIds.delete(id); this.mustMeldCardIds.delete(id); }
 
     const contributions = {};
     for (const c of cards) contributions[c.id] = p.id;
@@ -202,6 +218,7 @@ export class DummyGame {
     if (this.turnPhase !== 'meld') return { ok: false, error: 'ยังไม่ถึงช่วงฝาก' };
     const p = this.players[r.idx];
     if (!p.hasMelded) return { ok: false, error: 'ต้องเคยเกิดแล้วก่อนถึงจะฝากได้' };
+    if (this.mustMeldCardIds.has(cardId)) return { ok: false, error: 'ไพ่ที่เก็บมาต้องใช้เกิด (ฝากไม่ได้)' };
     const card = p.hand.find((c) => c.id === cardId);
     if (!card) return { ok: false, error: 'ไม่มีไพ่ในมือ' };
     const meldIdx = this.melds.findIndex((m) => m.id === meldId);
@@ -211,7 +228,6 @@ export class DummyGame {
     // Apply
     p.hand = p.hand.filter((c) => c.id !== cardId);
     p.drawnCardIds.delete(cardId);
-    this.mustUseCardIds.delete(cardId);
     const updated = addToMeld(meld, card);
     updated.contributions = { ...meld.contributions, [card.id]: p.id };
     this.melds[meldIdx] = updated;
@@ -245,8 +261,8 @@ export class DummyGame {
     const p = this.players[r.idx];
     const card = p.hand.find((c) => c.id === cardId);
     if (!card) return { ok: false, error: 'ไม่มีไพ่ในมือ' };
-    if (this.mustUseCardIds.size > 0) {
-      return { ok: false, error: 'ต้องใช้ไพ่ที่เก็บมาก่อนทิ้ง' };
+    if (this.mustMeldCardIds.size > 0) {
+      return { ok: false, error: 'ต้องเกิดไพ่ที่เก็บมาก่อนทิ้ง' };
     }
 
     p.hand = p.hand.filter((c) => c.id !== cardId);
@@ -394,7 +410,7 @@ export class DummyGame {
         cards: m.cards.map(publicCard),
         contributions: m.contributions || {},
       })),
-      mustUseCardIds: [...this.mustUseCardIds],
+      mustMeldCardIds: [...this.mustMeldCardIds],
       players: this.players.map((p) => ({
         id: p.id,
         name: p.name,
